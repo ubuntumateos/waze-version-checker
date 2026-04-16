@@ -1,22 +1,23 @@
 # --- iOS版のチェック ---
 iOS_URLは「https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp」
-iOS_URLをAJAX送信した時には
-　　結果は対象をJSONパースしたもの
-　　最新版は結果["results"][0]["version"]
-　　「【iOS版】最新バージョンは {最新版} です」を表示。
+iOS_URLをHTTP取得した時には
+    結果はそれをJSONパース
+    最新版は結果["results"][0]["version"]
+    「【iOS版】最新バージョンは {最新版} です」を表示
 ここまで
 
 # --- Android版のチェック ---
 AD_URLは「https://play.google.com/store/apps/details?id=com.waze&hl=ja」
-AD_URLをAJAX送信した時には
-    もし、対象に「"[[[\\"」が含まるならば
-        tmpは対象を「"[[[\\"」で区切ったもの
-        もし、tmpの要素数 > 1ならば
+AD_URLをHTTP取得した時には
+    HTMLは対象
+    もし、HTMLに「"[[[\\"」が含まれるならば
+        tmpはHTMLを「"[[[\\"」で区切ったもの
+        もし、(tmpの要素数) > 1ならば
             Vはtmp[1]を「\\」で区切ったもの
             最新版はV[0]
-            「【Android版】最新バージョンは {最新版} です」を表示。
+            「【Android版】最新バージョンは {最新版} です」を表示
         ここまで
     違えば
-        「【Android版】バージョン情報の取得に失敗しました」を表示。
+        「【Android版】バージョン情報の取得に失敗しました」を表示
     ここまで
 ここまで
