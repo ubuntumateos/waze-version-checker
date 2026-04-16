@@ -1,0 +1,1 @@
+# waze-version-checker
