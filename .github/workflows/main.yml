@@ -1,0 +1,20 @@
+name: Waze_Auto_Check
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 毎日午前9時（日本時間）に自動実行
+  workflow_dispatch:    # 手動で「今すぐ実行」ボタンを出す
+
+jobs:
+  run-nako3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Nadeshiko3
+        run: npm install -g nadeshiko3
+      - name: Run Nadeshiko Script
+        run: cnako3 check.nako3
