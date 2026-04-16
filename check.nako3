@@ -1,14 +1,14 @@
 # --- iOS版のチェック ---
-iOS_URLは「https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp」
-iOS_URLをHTTP取得した時には
-    結果はそれをJSONパース
+「https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp」にHTTP取得。
+もし、対象が空でなければ
+    結果は対象をJSONパース
     最新版は結果["results"][0]["version"]
     「【iOS版】最新バージョンは {最新版} です」を表示
 ここまで
 
 # --- Android版のチェック ---
-AD_URLは「https://play.google.com/store/apps/details?id=com.waze&hl=ja」
-AD_URLをHTTP取得した時には
+「https://play.google.com/store/apps/details?id=com.waze&hl=ja」にHTTP取得。
+もし、対象が空でなければ
     HTMLは対象
     もし、HTMLに「"[[[\\"」が含まれるならば
         tmpはHTMLを「"[[[\\"」で区切ったもの
@@ -17,7 +17,5 @@ AD_URLをHTTP取得した時には
             最新版はV[0]
             「【Android版】最新バージョンは {最新版} です」を表示
         ここまで
-    違えば
-        「【Android版】バージョン情報の取得に失敗しました」を表示
     ここまで
 ここまで
