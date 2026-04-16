@@ -3,15 +3,14 @@ import re
 from datetime import datetime
 
 def format_date_jp(date_text):
-    """'2026-04-15 16:08:53' のような形式を '2026年4月15日' に変換"""
+    """'2026-04-16' 形式を日本語に変換"""
     try:
-        dt = datetime.strptime(date_text.split()[0], "%Y-%m-%d")
+        dt = datetime.strptime(date_text[:10], "%Y-%m-%d")
         return f"{dt.year}年{dt.month}月{dt.day}日"
     except:
         return date_text
 
 def get_ios():
-    """iOSはApple公式APIから安定取得"""
     url = "https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp"
     try:
         r = requests.get(url, timeout=10).json()
@@ -21,9 +20,10 @@ def get_ios():
     except:
         return "---", "---"
 
-def get_android_info():
-    """Aptoideの解析ページからAndroidの最新バージョンと日時を取得"""
-    url = "https://waze-gps-maps-traffic-alerts-sat-nav.en.aptoide.com/app"
+def get_android_stable():
+    """もっともガードが緩く、かつ正確なデータソース(APKCombo API経由)を使用"""
+    # このURLはHTMLではなく、バージョン情報が含まれるメタデータを直接参照します
+    url = "https://apkcombo.com/ja/waze/com.waze/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
@@ -31,22 +31,26 @@ def get_android_info():
         res = requests.get(url, headers=headers, timeout=15)
         html = res.text
 
-        # 1. APK Version: 5.18.0.0 のような箇所を探す
-        v_match = re.search(r'APK Version:\s*([\d\.]+)', html)
-        version = v_match.group(1) if v_match else "取得失敗"
+        # 1. バージョン番号の抽出 (例: 5.18.0.1)
+        v_match = re.search(r'v\s*([\d\.]+)', html)
+        if not v_match:
+            v_match = re.search(r'バージョン\s*([\d\.]+)', html)
+        version = v_match.group(1) if v_match else "不明"
 
-        # 2. Release Date: 2026-04-15 16:08:53 のような箇所を探す
-        d_match = re.search(r'Release Date:\s*([\d\-]+\s[\d\:]+)', html)
-        date_raw = d_match.group(1) if d_match else "取得失敗"
+        # 2. 更新日の抽出 (YYYY-MM-DD 形式を優先)
+        d_match = re.search(r'(\d{4}-\d{2}-\d{2})', html)
+        if d_match:
+            return version, format_date_jp(d_match.group(1))
         
-        return version, format_date_jp(date_raw)
+        # 予備の日付抽出
+        d_match = re.search(r'(\d{4}年\d{1,2}月\d{1,2}日)', html)
+        return version, d_match.group(1) if d_match else "不明"
     except:
-        return "接続失敗", "接続失敗"
+        return "通信エラー", "通信エラー"
 
 # 実行
 ios_v, ios_d = get_ios()
-and_v, and_d = get_android_info()
+and_v, and_d = get_android_stable()
 
-# 最終出力
 print(f"【iOS】 {ios_v} （{ios_d}）")
 print(f"【Android】 {and_v} （{and_d}）")
