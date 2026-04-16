@@ -15,6 +15,6 @@ jobs:
         with:
           node-version: '20'
       - name: Install Nadeshiko3
-        run: npm install -g nadeshiko3
+        run: npm install -g nadesiko3
       - name: Run Nadeshiko Script
         run: cnako3 check.nako3
