@@ -1,15 +1,23 @@
-name: Waze_Auto_Check_Nako3
+name: Waze_Version_Check_Python
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 手動実行用
 
 jobs:
-  run-nako3:
+  run-python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Nadesiko3
-        run: npm install -g nadesiko3
-      - name: Run Nadeshiko Script
-        run: cnako3 check.nako3
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run version check
+        run: python check.py
         
