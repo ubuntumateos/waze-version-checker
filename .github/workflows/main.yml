@@ -1,21 +1,15 @@
 name: Waze_Auto_Check_Nako3
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
-  run-nako3: # ここを再度 nako3 に戻します
+  run-nako3:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
       - name: Install Nadesiko3
-        run: npm install -g nadesiko3 # 綴りは h抜きの nadesiko3
+        run: npm install -g nadesiko3
       - name: Run Nadeshiko Script
         run: cnako3 check.nako3
         
