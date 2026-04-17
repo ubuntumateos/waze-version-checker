@@ -58,14 +58,15 @@ def get_ios_info():
 
 
 def get_android_info():
-    """APKCombo から Android 版のバージョンと更新日を取得"""
-    url = "https://apkcombo.com/ja/waze/com.waze/"
+    """Google Play ストアから Android 版のバージョンと更新日を取得"""
+    url = "https://play.google.com/store/apps/details?id=com.waze&hl=ja&gl=JP"
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/120.0.0.0 Safari/537.36"
-        )
+        ),
+        "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7"
     }
 
     try:
@@ -74,30 +75,30 @@ def get_android_info():
         html = response.text
 
         # バージョン抽出
+        versions = re.findall(r'"(\d+\.\d+\.\d+\.\d+)"', html)
+        if not versions:
+            versions = re.findall(r'"(\d+\.\d+\.\d+)"', html)
+        
+        def parse_version(v):
+            return [int(x) for x in v.split('.')]
+            
         version = "不明"
-        version_patterns = [
-            r'v\s*([\d\.]+)',
-            r'バージョン\s*([\d\.]+)',
-            r'Version\s*([\d\.]+)',
-        ]
-        for pattern in version_patterns:
-            match = re.search(pattern, html, re.IGNORECASE)
-            if match:
-                version = match.group(1)
-                break
+        if versions:
+            versions.sort(key=parse_version, reverse=True)
+            version = versions[0]
 
         # 更新日抽出
         updated = "不明"
-
-        # YYYY-MM-DD
-        match_date = re.search(r'(\d{4}-\d{2}-\d{2})', html)
-        if match_date:
-            updated = format_date_jp(match_date.group(1))
+        date_pattern = r'"(\d{4}年\d{1,2}月\d{1,2}日)"'
+        date_match = re.search(date_pattern, html)
+        if date_match:
+            updated = date_match.group(1)
         else:
-            # YYYY年M月D日
-            match_date_jp = re.search(r'(\d{4}年\d{1,2}月\d{1,2}日)', html)
-            if match_date_jp:
-                updated = match_date_jp.group(1)
+            date_pattern2 = r'"(\d{4}/\d{2}/\d{2})"'
+            date_match2 = re.search(date_pattern2, html)
+            if date_match2:
+                parts = date_match2.group(1).split('/')
+                updated = f"{parts[0]}年{int(parts[1])}月{int(parts[2])}日"
 
         return {
             "platform": "Android",
