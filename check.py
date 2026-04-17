@@ -2,55 +2,128 @@ import requests
 import re
 from datetime import datetime
 
+
 def format_date_jp(date_text):
-    """'2026-04-16' 形式を日本語に変換"""
-    try:
-        dt = datetime.strptime(date_text[:10], "%Y-%m-%d")
-        return f"{dt.year}年{dt.month}月{dt.day}日"
-    except:
-        return date_text
+    """日付文字列を YYYY年M月D日 に変換"""
+    if not date_text:
+        return "不明"
 
-def get_ios():
+    patterns = [
+        ("%Y-%m-%d", date_text[:10]),
+        ("%Y-%m-%dT%H:%M:%SZ", date_text),
+    ]
+
+    for fmt, value in patterns:
+        try:
+            dt = datetime.strptime(value, fmt)
+            return f"{dt.year}年{dt.month}月{dt.day}日"
+        except:
+            pass
+
+    return date_text
+
+
+def get_ios_info():
+    """App Store から iOS 版のバージョンと更新日を取得"""
     url = "https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp"
-    try:
-        r = requests.get(url, timeout=10).json()
-        d = r["results"][0]
-        dt = datetime.strptime(d["currentVersionReleaseDate"], "%Y-%m-%dT%H:%M:%SZ")
-        return d["version"], dt.strftime("%Y年%m月%d日")
-    except:
-        return "---", "---"
 
-def get_android_stable():
-    """もっともガードが緩く、かつ正確なデータソース(APKCombo API経由)を使用"""
-    # このURLはHTMLではなく、バージョン情報が含まれるメタデータを直接参照します
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("results"):
+            return {
+                "platform": "iOS",
+                "version": "不明",
+                "updated": "不明"
+            }
+
+        app = data["results"][0]
+        version = app.get("version", "不明")
+        updated = format_date_jp(app.get("currentVersionReleaseDate", ""))
+
+        return {
+            "platform": "iOS",
+            "version": version,
+            "updated": updated
+        }
+
+    except Exception:
+        return {
+            "platform": "iOS",
+            "version": "取得失敗",
+            "updated": "取得失敗"
+        }
+
+
+def get_android_info():
+    """APKCombo から Android 版のバージョンと更新日を取得"""
     url = "https://apkcombo.com/ja/waze/com.waze/"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
     }
+
     try:
-        res = requests.get(url, headers=headers, timeout=15)
-        html = res.text
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        html = response.text
 
-        # 1. バージョン番号の抽出 (例: 5.18.0.1)
-        v_match = re.search(r'v\s*([\d\.]+)', html)
-        if not v_match:
-            v_match = re.search(r'バージョン\s*([\d\.]+)', html)
-        version = v_match.group(1) if v_match else "不明"
+        # バージョン抽出
+        version = "不明"
+        version_patterns = [
+            r'v\s*([\d\.]+)',
+            r'バージョン\s*([\d\.]+)',
+            r'Version\s*([\d\.]+)',
+        ]
+        for pattern in version_patterns:
+            match = re.search(pattern, html, re.IGNORECASE)
+            if match:
+                version = match.group(1)
+                break
 
-        # 2. 更新日の抽出 (YYYY-MM-DD 形式を優先)
-        d_match = re.search(r'(\d{4}-\d{2}-\d{2})', html)
-        if d_match:
-            return version, format_date_jp(d_match.group(1))
-        
-        # 予備の日付抽出
-        d_match = re.search(r'(\d{4}年\d{1,2}月\d{1,2}日)', html)
-        return version, d_match.group(1) if d_match else "不明"
-    except:
-        return "通信エラー", "通信エラー"
+        # 更新日抽出
+        updated = "不明"
 
-# 実行
-ios_v, ios_d = get_ios()
-and_v, and_d = get_android_stable()
+        # YYYY-MM-DD
+        match_date = re.search(r'(\d{4}-\d{2}-\d{2})', html)
+        if match_date:
+            updated = format_date_jp(match_date.group(1))
+        else:
+            # YYYY年M月D日
+            match_date_jp = re.search(r'(\d{4}年\d{1,2}月\d{1,2}日)', html)
+            if match_date_jp:
+                updated = match_date_jp.group(1)
 
-print(f"【iOS】 {ios_v} （{ios_d}）")
-print(f"【Android】 {and_v} （{and_d}）")
+        return {
+            "platform": "Android",
+            "version": version,
+            "updated": updated
+        }
+
+    except Exception:
+        return {
+            "platform": "Android",
+            "version": "取得失敗",
+            "updated": "取得失敗"
+        }
+
+
+def print_app_versions(app_name="Waze"):
+    ios_info = get_ios_info()
+    android_info = get_android_info()
+
+    print(f"=== {app_name} バージョン情報 ===")
+    print(f"{'OS':<10} {'バージョン':<15} {'更新日'}")
+    print("-" * 40)
+    print(f"{ios_info['platform']:<10} {ios_info['version']:<15} {ios_info['updated']}")
+    print(f"{android_info['platform']:<10} {android_info['version']:<15} {android_info['updated']}")
+
+
+if __name__ == "__main__":
+    print_app_versions("Waze")
+    
