@@ -1,0 +1,145 @@
+# Waze の iOS / Android バージョン情報を取得するサンプル
+
+●日付整形処理とは
+    DATE_TEXT = 対象
+
+    もし DATE_TEXT = "" なら
+        「不明」を戻す
+    ここまで
+
+    # 2026-04-18 のような形式
+    もし DATE_TEXTが「^(\d{4})-(\d{2})-(\d{2})」に正規表現一致したなら
+        Y = 抽出文字列[1]
+        M = 抽出文字列[2]
+        D = 抽出文字列[3]
+        「{Y}年{Mを数値}月{Dを数値}日」を戻す
+    ここまで
+
+    # 2026-04-18T12:34:56Z のような形式も先頭10文字で処理
+    もし DATE_TEXTの文字数 >= 10 なら
+        HEAD = DATE_TEXTの0から10文字抜き出す
+        もし HEADが「^(\d{4})-(\d{2})-(\d{2})$」に正規表現一致したなら
+            Y = 抽出文字列[1]
+            M = 抽出文字列[2]
+            D = 抽出文字列[3]
+            「{Y}年{Mを数値}月{Dを数値}日」を戻す
+        ここまで
+    ここまで
+
+    DATE_TEXTを戻す
+ここまで
+
+●iOS情報取得とは
+    URL = "https://itunes.apple.com/lookup?bundleId=com.waze.iphone&country=jp"
+
+    試す
+        JSON文字列 = URLからHTTP取得
+        DATA = JSON文字列をJSONデコード
+
+        もし DATA["results"]の要素数 = 0 なら
+            {"platform":"iOS", "version":"不明", "updated":"不明"}を戻す
+        ここまで
+
+        APP = DATA["results"][0]
+
+        VERSION = "不明"
+        UPDATED_RAW = ""
+
+        もし APP["version"] != NULL なら
+            VERSION = APP["version"]
+        ここまで
+
+        もし APP["currentVersionReleaseDate"] != NULL なら
+            UPDATED_RAW = APP["currentVersionReleaseDate"]
+        ここまで
+
+        UPDATED = UPDATED_RAWの日付整形処理
+
+        {"platform":"iOS", "version":VERSION, "updated":UPDATED}を戻す
+    例外時
+        {"platform":"iOS", "version":"取得失敗", "updated":"取得失敗"}を戻す
+    ここまで
+ここまで
+
+●バージョン配列比較用ソート値取得とは
+    V = 対象
+    A = Vを「.」で区切る
+
+    N1 = 0
+    N2 = 0
+    N3 = 0
+    N4 = 0
+
+    もし Aの要素数 >= 1 なら N1 = A[0]を数値
+    もし Aの要素数 >= 2 なら N2 = A[1]を数値
+    もし Aの要素数 >= 3 なら N3 = A[2]を数値
+    もし Aの要素数 >= 4 なら N4 = A[3]を数値
+
+    # 比較しやすいように大きな数へ変換
+    ((N1*1000000000)+(N2*1000000)+(N3*1000)+N4)を戻す
+ここまで
+
+●Android情報取得とは
+    URL = "https://play.google.com/store/apps/details?id=com.waze&hl=ja&gl=JP"
+
+    試す
+        HTML = URLからHTTP取得
+
+        VERSION = "不明"
+        UPDATED = "不明"
+
+        # 4桁版バージョン候補を全部探す
+        候補一覧 = HTMLを「"(\d+\.\d+\.\d+\.\d+)"」で正規表現全検索
+        もし 候補一覧の要素数 = 0 なら
+            候補一覧 = HTMLを「"(\d+\.\d+\.\d+)"」で正規表現全検索
+        ここまで
+
+        もし 候補一覧の要素数 > 0 なら
+            最大値 = -1
+            最大版 = "不明"
+
+            候補一覧を反復
+                V = 対象
+                SCORE = Vのバージョン配列比較用ソート値取得
+                もし SCORE > 最大値 なら
+                    最大値 = SCORE
+                    最大版 = V
+                ここまで
+            ここまで
+
+            VERSION = 最大版
+        ここまで
+
+        # 更新日抽出: 2026年4月18日
+        もし HTMLが「"(\d{4}年\d{1,2}月\d{1,2}日)"」に正規表現一致したなら
+            UPDATED = 抽出文字列[1]
+        違えば
+            # 2026/04/18
+            もし HTMLが「"(\d{4})/(\d{2})/(\d{2})"」に正規表現一致したなら
+                Y = 抽出文字列[1]
+                M = 抽出文字列[2]
+                D = 抽出文字列[3]
+                UPDATED = "{Y}年{Mを数値}月{Dを数値}日"
+            ここまで
+        ここまで
+
+        {"platform":"Android", "version":VERSION, "updated":UPDATED}を戻す
+    例外時
+        {"platform":"Android", "version":"取得失敗", "updated":"取得失敗"}を戻す
+    ここまで
+ここまで
+
+●アプリ版情報表示とは
+    APP_NAME = 対象
+
+    IOS_INFO = iOS情報取得
+    ANDROID_INFO = Android情報取得
+
+    「=== {APP_NAME} バージョン情報 ===」を表示
+    「OS         バージョン        更新日」を表示
+    「----------------------------------------」を表示
+    「{IOS_INFO["platform"]}        {IOS_INFO["version"]}        {IOS_INFO["updated"]}」を表示
+    「{ANDROID_INFO["platform"]}    {ANDROID_INFO["version"]}    {ANDROID_INFO["updated"]}」を表示
+ここまで
+
+「Waze」のアプリ版情報表示
